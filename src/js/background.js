@@ -1,4 +1,4 @@
-import { Actor, Vector, Color, GraphicsGroup, Rectangle, Animation, SpriteSheet } from "excalibur";
+import { Actor, Vector, SpriteSheet, Animation } from "excalibur";
 import { Resources } from "./resources.js";
 
 export class BackgroundImage extends Actor {
@@ -12,22 +12,77 @@ export class BackgroundImage extends Actor {
     }
 
     async onInitialize() {
-        // Wacht tot het plaatje geladen is
         await Resources.Background.load();
         const sprite = Resources.Background.toSprite();
         sprite.anchor = new Vector(0.5, 0.5);
-
-        // Nu zijn breedte en hoogte correct!
         const scaleX = 640 / sprite.width;
         const scaleY = 480 / sprite.height;
         sprite.scale = new Vector(scaleX, scaleY);
         this.graphics.use(sprite);
-        // this.scale = new Vector(1.25, 1.25)
-        this.z = -9
+        this.z = -9;
     }
 }
 
+export class MenuBackground extends Actor {
+    constructor() {
+        super({
+            pos: new Vector(320, 240),
+            width: 640,
+            height: 480,
+            anchor: new Vector(0.5, 0.5)
+        });
+    }
 
+    async onInitialize() {
+        await Resources.MenuBackground.load();
+        const sprite = Resources.MenuBackground.toSprite();
+        sprite.anchor = new Vector(0.5, 0.5);
+        const scaleX = 640 / sprite.width;
+        const scaleY = 480 / sprite.height;
+        sprite.scale = new Vector(scaleX, scaleY);
+        this.graphics.use(sprite);
+        this.z = -9;
+    }
+}
+
+export class OptionsBackground extends Actor {
+    constructor() {
+        super({
+            pos: new Vector(320, 240),
+            width: 640,
+            height: 480,
+            anchor: new Vector(0.5, 0.5)
+        });
+    }
+
+    async onInitialize() {
+        await Resources.OptionsBackground.load();
+        const sprite = Resources.OptionsBackground.toSprite();
+        sprite.anchor = new Vector(0.5, 0.5);
+        const scaleX = 640 / sprite.width;
+        const scaleY = 480 / sprite.height;
+        sprite.scale = new Vector(scaleX, scaleY);
+        this.graphics.use(sprite);
+        this.z = -9;
+    }
+}
+
+export class Logo extends Actor {
+    constructor() {
+        super({
+            pos: new Vector(320, 240),
+            anchor: new Vector(0.5, 0.5),
+            z: -8
+        });
+    }
+
+    async onInitialize() {
+        await Resources.Logo.load();
+        const sprite = Resources.Logo.toSprite();
+        sprite.anchor = new Vector(0.5, 0.5);
+        this.graphics.use(sprite);
+    }
+}
 
 export class animatedStar1 extends Actor {
     constructor(pos = new Vector(0, 0)) {

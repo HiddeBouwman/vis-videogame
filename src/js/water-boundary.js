@@ -1,5 +1,4 @@
 import { Actor, Vector, Color, CollisionType } from "excalibur";
-// import { customGroup, customGroup2 } from "./collisiongroups.js"
 
 export class WaterBoundary extends Actor {
     constructor(x, y, width, height) {
@@ -8,8 +7,7 @@ export class WaterBoundary extends Actor {
             width,
             height,
             color: Color.Transparent, 
-            CollisionType: CollisionType.Fixed, 
+            collisionType: CollisionType.Fixed, 
         });
-        // this.collider.useBoxCollider(width, height);
     }
 }
