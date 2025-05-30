@@ -8,12 +8,55 @@ import { MenuBackground, OptionsBackground, Logo, BackgroundImage, animatedStar1
 import { Cursor } from './cursor.js'
 import { WaterBoundary } from './water-boundary.js'
 import { ShadowFish } from './shadowfish.js'
-import { addHighScore, addFastestTime } from './highscores.js';
+import { highscoreManager } from './highscores.js';
+
+
+class GameState {
+    #score = 0;
+    #score2 = 0;
+    #timer = 0;
+    #elapsedMs = 0;
+    #gameState = "menu";
+    #gamemode = "versus";
+    #timerLabel = null;
+    #scoreLabel = null;
+    #scoreLabel2 = null;
+    #scoreGoalLabel = null;
+    #singleTimeLabel = null;
+    #elapsedTimeLabel = null;
+
+    constructor() {
+        this.reset();
+    }
+
+    // alle instellingen worden alvast geinitialiseerd
+    reset() {
+        this.#score = 0;
+        this.#score2 = 0;
+        this.#timer = 0;
+        this.#elapsedMs = 0;
+        this.#gameState = "menu";
+        this.#gamemode = "versus";
+        this.#timerLabel = null;
+        this.#scoreLabel = null;
+        this.#scoreLabel2 = null;
+        this.#scoreGoalLabel = null;
+        this.#singleTimeLabel = null;
+        this.#elapsedTimeLabel = null;
+    }
+
+    get score() { return this.#score; }
+    set score(val) { this.#score = val; }
+    get score2() { return this.#score2; }
+    set score2(val) { this.#score2 = val; }
+    get timer() { return this.#timer; }
+    set timer(val) { this.#timer = val; }
+}
 
 
 export class Game extends Engine {
 
-    frameCounter
+    frameCounter // moest van Erik
 
     constructor() {
         super({
@@ -27,21 +70,21 @@ export class Game extends Engine {
             displayMode: DisplayMode.FitScreen
         })
         
-        //this.showDebug(true)
+        // this.showDebug(true)
         
-        this.start(ResourceLoader).then(() => this.showMenu())
+        this.start(ResourceLoader).then(() => this.showMenu()) // Start het laden van resources, toont daarna het hoofdmenu
+
+        // Alle variabelen worden alvast geinitialiseerd
         this.bobber = null;
-        this.frameCounter = 0;
-        this.shadowfishCount = 3;
+        this.frameCounter = 0; // Telt frames op, heeft te maken met het spawnen van de Shadowfish*
+        this.shadowfishCount = 3; // Leugen
         this.spawnedShadowfish = 0;
-        this.gameState = "menu";
-        this.timer = 0;
-        this.timerLabel = null;
-        this.scoreGoalLabel = null;
-        this.inputCooldown = 0; // <-- nieuw
-        this.gamemode = "versus"; // standaard
+        this.inputCooldown = 0; // Inputcooldown is op sommige plekken nodig, omdat je anders met 1 klik meerdere menu knoppen tegelijkertijd doet aangezien er geen laadschermen zijn
+        this.state = new GameState();
+        this.scoreManager = new ScoreManager();
     }
 
+    // Dat gebeuren over de input cooldown wat ik als het goed is al uitgelegd heb
     onPreUpdate(engine, delta) {
         if (this.inputCooldown > 0) {
             this.inputCooldown -= delta;
@@ -49,12 +92,13 @@ export class Game extends Engine {
         }
     }
 
+    // Toont het hoofdmenu van het spel, en reset de gamestate
     showMenu() {
         this.currentScene.clear();
-        this.gameState = "menu";
+        this.state.reset(); // Reset alle state
+        this.state.gameState = "menu";
         this._lastTime = null;
-        this.timer = 0;
-        this.inputCooldown = 50;
+        this.inputCooldown = 50; // 50 milliseconden cooldown, anders zou je als je op de terug knop klikt gelijk in het singleplayer of versus keuzescherm terecht komen.
 
         // Gebruik MenuBackground
         const bg = new MenuBackground();
@@ -64,19 +108,20 @@ export class Game extends Engine {
         const logo = new Logo();
         this.add(logo);
 
-        // Let op: verander hier de callback voor spelen!
+        // Maakt het hoofdmenu aan en voegt het toe
         this.menu = new MainMenu(
             this,
-            () => this.showModeSelect(), // <-- laat eerst het modus-selectiescherm zien
-            () => this.showOptions(),
-            () => this.showScores()
+            () => this.showModeSelect(), // gaat naar modus selectie
+            () => this.showOptions(), // Gaat naar opties
+            () => this.showScores() // Gaat naar scores
         );
         this.add(this.menu);
     }
 
+    // Brengt je naar het opties / instellingen scherm, en zet de gamestate op "options"
     showOptions() {
         this.currentScene.clear();
-        this.gameState = "options";
+        this.state.gameState = "options";
         this._lastTime = null;
         this.timer = 0;
         this.inputCooldown = 300;
@@ -85,10 +130,12 @@ export class Game extends Engine {
         const bg = new OptionsBackground();
         this.add(bg);
 
+        // Maakt het opties menu aan en voegt het toe
         this.optionsMenu = new OptionsMenu(this, () => this.showMenu());
         this.add(this.optionsMenu);
     }
 
+    // toont het score overzicht
     showScores() {
         this.currentScene.clear();
         this.inputCooldown = 300;
@@ -105,6 +152,7 @@ export class Game extends Engine {
         this.add(this.scoresMenu);
     }
 
+    // Toont het scherm waar je de singleplayer of versus modus kiest.
     showModeSelect() {
         this.currentScene.clear();
         this.inputCooldown = 50;
@@ -115,23 +163,28 @@ export class Game extends Engine {
 
         this.modeMenu = new ModeSelectMenu(
             this,
-            () => { this.gamemode = "single"; this.startGame(); },
-            () => { this.gamemode = "versus"; this.startGame(); },
-            () => this.showMenu()
+            () => { this.gamemode = "single"; this.startGame(); }, // start singleplayer
+            () => { this.gamemode = "versus"; this.startGame(); }, // start verus
+            () => this.showMenu() // Terug naar het hoofdmenu
         );
         this.add(this.modeMenu);
     }
 
+
+
+    // Start het spel, zet de gamestate op "game"
     startGame() {
         this.currentScene.clear();
-        this.gameState = "game";
+        this.state.gameState = "game";
         this.bobber = null;
         this.bobber2 = null;
 
         let bg = new BackgroundImage();
         this.add(bg);
         
-        // Onzichtbare muren
+
+        // Onzichtbare muren, ik wou het om een of andere reden zo doen in plaats van door lijnen te tekenen.
+        
         // Boven water
         this.add(new WaterBoundary(270, 340, 100, 50));
         
@@ -166,6 +219,7 @@ export class Game extends Engine {
         this.add(new WaterBoundary(640, 450, 50, 80));
 
 
+        // Voegt de spelers cursors toe
         let cursor = new Cursor()
         this.add(cursor)
         this.cursor = cursor;
@@ -175,14 +229,8 @@ export class Game extends Engine {
             this.add(cursor2);
             this.cursor2 = cursor2;
         }
-
-        // let shark = new Shark()
-        // this.add(shark)
-        // for (let i = 0; i < 10; i++) {
-            // let fish = new Fish()
-            // this.add(fish)
-        // }
         
+        // Voegt de geanimeerde sterren toe aan de game achtergrond
         let star1 = new animatedStar1()
         this.add(star1)
 
@@ -201,7 +249,8 @@ export class Game extends Engine {
         this.add(new animatedStar2(new Vector(540, 50)));
 
 
-        this.score = 0;
+        // Zet scores en labels klaar
+        this.state.score = 0;
         this.scoreLabel = new Label({
             text: `Score: 0`,
             pos: new Vector(100, 20),
@@ -215,7 +264,7 @@ export class Game extends Engine {
         this.scoreLabel.text = `Score: 0`;
 
         if (this.gamemode === "versus") {
-            this.score2 = 0;
+            this.state.score2 = 0;
             this.scoreLabel2 = new Label({
                 text: `Score 2: 0`,
                 pos: new Vector(this.drawWidth - 300, 20),
@@ -224,12 +273,12 @@ export class Game extends Engine {
                     size: 20,
                     color: Color.Yellow
                 }),
-                anchor: new Vector(1, 0) // Rechtsboven uitlijnen
+                anchor: new Vector(1, 0)
             });
             this.add(this.scoreLabel2);
             this.scoreLabel2.text = `Score 2: 0`;
         } else {
-            this.score2 = 0;
+            this.state.score2 = 0;
             this.scoreLabel2 = null;
 
             // In singleplayer: toon tijd rechtsboven waar anders score2 staat
@@ -290,15 +339,28 @@ export class Game extends Engine {
                 });
                 this.add(this.elapsedTimeLabel);
             } else {
-                this.scoreGoalLabel = null;
+                this.scoreGoalLabel = new Label({
+                    text: `Doel: ${settings.scoreGoal} punten`,
+                    pos: new Vector(this.drawWidth - 300, 50),
+                    font: Resources.PixelFont.toFont({
+                        unit: FontUnit.Px,
+                        size: 18,
+                        color: Color.White
+                    }),
+                    anchor: new Vector(1, 0)
+                });
+                this.add(this.scoreGoalLabel);
+
                 this.elapsedTimeLabel = null;
             }
         }
         this.elapsedMs = 0;
     }
 
+    /* Wordt elke frame aangeroepen na het updaten van de game logica,
+       Regelt het spawnen van de shadowfish, de timer of de scoregoal, en checkt of het spel moet eindigen. */ 
     onPostUpdate(engine) {
-        if (this.gameState !== "game") return;
+        if (this.state.gameState !== "game") return;
         this.frameCounter++;
         let spawnInterval = Math.round(12 / (settings.spawnSpeed || 1));
         if (this.frameCounter > spawnInterval) {
@@ -310,18 +372,25 @@ export class Game extends Engine {
             this.frameCounter = 0;
         }
 
-        // Timer functionaliteit
-        if (settings.mode === "timer") {
+        // Timer functionaliteit, hier heb ik voornamelijk chatGPT / Copilot voor gebruikt
+        if (settings.mode === "timer") { // Als spelmodus = timer
+
+            // Ik heb geen idee wat dit allemaal betekent
             if (!this._lastTime) this._lastTime = Date.now();
             let now = Date.now();
             let deltaSec = (now - this._lastTime) / 1000;
             this._lastTime = now;
             this.timer -= deltaSec;
+
+            // Als timer kleiner dan 0 dan timer is 0
             if (this.timer < 0) this.timer = 0;
 
+            // Als label van timer er is gaat die de timer tekst plaatsen. 
             if (this.timerLabel) {
                 this.timerLabel.text = `Tijd: ${Math.ceil(this.timer)}`;
             }
+
+            // dit moet omdat ik dit pas naderhand had bedacht en moest toen haastig toevoegen, kon efficiënter
             if (this.gamemode === "single" && this.singleTimeLabel) {
                 this.singleTimeLabel.text = `Tijd: ${Math.ceil(this.timer)}`;
             }
@@ -330,7 +399,7 @@ export class Game extends Engine {
             }
         }
 
-        // Scoregoal functionaliteit
+        // Scoregoal functionaliteit, hier heb ik ook voornamelijk chatGPT / Copilot voor gebruitk
         if (settings.mode === "score") {
             if (this.gamemode === "versus" && this.scoreGoalLabel && this.elapsedTimeLabel) {
                 if (!this._lastTime) this._lastTime = Date.now();
@@ -340,7 +409,7 @@ export class Game extends Engine {
                 this.elapsedMs += deltaMs;
                 this.scoreGoalLabel.text = `Doel: ${settings.scoreGoal} punten`;
                 this.elapsedTimeLabel.text = `Tijd: ${(this.elapsedMs / 1000).toFixed(2)}s`;
-                if (this.score >= settings.scoreGoal || this.score2 >= settings.scoreGoal) {
+                if (this.state.score >= settings.scoreGoal || this.state.score2 >= settings.scoreGoal) {
                     this.endGame();
                 }
             } else if (this.gamemode === "single" && this.singleTimeLabel) {
@@ -349,26 +418,38 @@ export class Game extends Engine {
                 let deltaMs = now - this._lastTime;
                 this._lastTime = now;
                 this.elapsedMs += deltaMs;
+                
                 this.singleTimeLabel.text = `Tijd: ${(this.elapsedMs / 1000).toFixed(2)}s`;
-                if (this.score >= settings.scoreGoal) {
+                if (this.state.score >= settings.scoreGoal) {
                     this.endGame();
                 }
             }
         }
     }
 
+    // punten toekennen aan speler 1
     addScore(points = 1) {
-        this.score += points;
-        this.scoreLabel.text = `Score: ${this.score}`;
+        if (settings.allowNegativeScore) {
+            this.state.score += points;
+        } else {
+            this.state.score = Math.max(0, this.state.score + points); // je kan geen minpunten hebben, tenzij deze geheime setting aanstaat.
+        }
+        this.scoreLabel.text = `Score: ${this.state.score}`;
     }
 
+    // punten toekennen aan speler 2
     addScorePlayer2(points = 1) {
-        this.score2 += points;
-        this.scoreLabel2.text = `Score 2: ${this.score2}`;
+        if (settings.allowNegativeScore) {
+            this.state.score2 += points;
+        } else {
+            this.state.score2 = Math.max(0, this.state.score2 + points);
+        }
+        this.scoreLabel2.text = `Score 2: ${this.state.score2}`;
     }
 
+    // eindigt het spel, toont de winnar of het resultaat, slaat eventuele highscores op
     endGame() {
-        this.gameState = "ended";
+        this.state.gameState = "ended";
 
         // Stop alle vissen
         for (const actor of this.currentScene.actors) {
@@ -392,10 +473,11 @@ export class Game extends Engine {
         let winnerText = "";
         let resultLabel = null;
 
+        // Versus: bepaal winnaar
         if (this.gamemode === "versus") {
             winnerText = "Gelijkspel!";
-            if (this.score > this.score2) winnerText = "Speler 1 wint!";
-            else if (this.score2 > this.score) winnerText = "Speler 2 wint!";
+            if (this.state.score > this.state.score2) winnerText = "Speler 1 wint!";
+            else if (this.state.score2 > this.state.score) winnerText = "Speler 2 wint!";
             if (winnerText) {
                 const winLabel = new Label({
                     text: winnerText,
@@ -410,11 +492,11 @@ export class Game extends Engine {
                 this.add(winLabel);
             }
         } else {
-            // Singleplayer: toon resultaat gecentreerd en uitvergroot
+        // Singleplayer: toon resultaat
             if (settings.mode === "timer") {
                 // Toon behaalde score
                 resultLabel = new Label({
-                    text: `Score: ${this.score}`,
+                    text: `Score: ${this.state.score}`,
                     pos: new Vector(this.drawWidth / 10, this.drawHeight / 2),
                     font: Resources.PixelFont.toFont({
                         unit: FontUnit.Px,
@@ -442,21 +524,43 @@ export class Game extends Engine {
         // Highscore opslaan
         if (settings.mode === "score") {
             // Snelste tijd opslaan
-            if (this.score >= settings.scoreGoal || this.score2 >= settings.scoreGoal) {
-                addFastestTime(Math.floor(this.elapsedMs));
+            if (this.state.score >= settings.scoreGoal || this.state.score2 >= settings.scoreGoal) {
+                highscoreManager.addFastestTime(Math.floor(this.elapsedMs));
             }
         } else {
             // Hoogste score opslaan
-            let eindscore = Math.max(this.score, this.score2);
+            let eindscore = Math.max(this.state.score, this.state.score2);
             if (eindscore > 0) {
-                addHighScore(eindscore);
+                highscoreManager.addHighScore(eindscore);
             }
         }
 
+        // Laagste score opslaan (???)
+        if (settings.allowNegativeScore) {
+            let minscore = Math.min(this.state.score, this.state.score2);
+            highscoreManager.addLowestScore(minscore);
+        }
+
+        // Ga na 4 seconden terug naar het hoofdmenu
         setTimeout(() => {
             this.showMenu();
         }, 4000);
     }
+}
+
+class ScoreManager {
+    #score = 0;
+    #score2 = 0;
+
+    reset() {
+        this.#score = 0;
+        this.#score2 = 0;
+    }
+    addScore(points = 1) { this.#score += points; }
+    addScorePlayer2(points = 1) { this.#score2 += points; }
+
+    get score() { return this.#score; }
+    get score2() { return this.#score2; }
 }
 
 new Game()

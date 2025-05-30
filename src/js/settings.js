@@ -1,13 +1,15 @@
-export const defaultSettings = {
-    mode: "timer", // "timer" of "score"
-    timer: 60,
-    scoreGoal: 100,
-    spawnSpeed: 1,
-    scoreboardType: "score", // "score" of "time"
-};
-
-export let settings = { ...defaultSettings };
-
-export function resetSettings() {
-    Object.assign(settings, defaultSettings);
+class Settings {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        this.mode = "timer";
+        this.timer = 60;
+        this.scoreGoal = 100;
+        this.spawnSpeed = 1;
+        this.scoreboardType = "score";
+        this.allowTire = true;
+        this.allowNegativeScore = false;
+    }
 }
+export const settings = new Settings();

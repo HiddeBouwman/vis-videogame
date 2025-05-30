@@ -26,10 +26,14 @@ const Resources = {
     smallFishPink: new ImageSource('images/smallfishpink.png'),
     turtle: new ImageSource('images/turtle.png'),
 
+    tire: new ImageSource('images/tire.png'),
+
     // Nog niet water vissen
     smallFishShadow: new ImageSource('images/smallfishshadow.png'),
     bigFishShadow: new ImageSource('images/bigfishshadow.png'),
     turtleShadow: new ImageSource('images/turtleshadow.png'),
+
+    tireShadow: new ImageSource('images/tireshadow.png'),
 
     // Andere zaken
     nom: new Sound('sound/nom.mp3'),

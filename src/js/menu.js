@@ -1,17 +1,30 @@
 import { Actor, Color, Vector, Label, FontUnit, Keys } from "excalibur";
 import { Resources } from "./resources.js";
-import { getHighScores, getFastestTimes } from './highscores.js';
+import { highscoreManager } from './highscores.js';
 import { settings } from './settings.js';
 
-export class MainMenu extends Actor {
+// regelt selectie van labels
+class BaseMenu extends Actor {
+    constructor() {
+        super();
+        this.labels = [];
+        this.selected = 0;
+    }
+    // zet het geselecteerde label op geel, alle andere wit.
+    updateSelection() {
+        this.labels.forEach((label, i) => {
+            label.color = (i === this.selected) ? Color.Yellow : Color.White;
+        });
+    }
+}
+
+export class MainMenu extends BaseMenu {
     constructor(engine, onPlay, onOptions, onScores) {
         super();
         this.engine = engine;
-        this.onPlay = onPlay;
-        this.onOptions = onOptions;
-        this.onScores = onScores;
-        this.selected = 0; // 0 = spelen, 1 = opties, 2 = scores
-        this.labels = [];
+        this.onPlay = onPlay; // callback voor starten spel
+        this.onOptions = onOptions; // callback voor opties menu
+        this.onScores = onScores; // callback voor scores menu
     }
 
     onInitialize(engine) {
@@ -41,12 +54,6 @@ export class MainMenu extends Actor {
         this.updateSelection();
     }
 
-    updateSelection() {
-        this.labels.forEach((label, i) => {
-            label.color = (i === this.selected) ? Color.Yellow : Color.White;
-        });
-    }
-
     onPreUpdate(engine) {
         if (engine.inputCooldown > 0) return;
 
@@ -66,13 +73,14 @@ export class MainMenu extends Actor {
     }
 }
 
-export class ScoresMenu extends Actor {
+export class ScoresMenu extends BaseMenu {
     constructor(engine, onBack) {
         super();
         this.engine = engine;
         this.onBack = onBack;
         this.labels = [];
-        this.selectedType = settings.scoreboardType || "score"; // "score" of "time"
+        // "score" of "time" of "lowest"
+        this.selectedType = settings.scoreboardType || "score";
     }
 
     onInitialize(engine) {
@@ -109,15 +117,22 @@ export class ScoresMenu extends Actor {
 
     updateScores() {
         if (this.selectedType === "score") {
-            this.titleLabel.text = "< SCORES >";
-            const scores = getHighScores();
+            this.titleLabel.text = "< HOOGSTE SCORES >";
+            const scores = highscoreManager.getHighScores();
             for (let i = 0; i < 5; i++) {
                 const score = scores[i] !== undefined ? scores[i] : "-";
                 this.scoreLabels[i].text = `${i + 1}. ${score}`;
             }
+        } else if (this.selectedType === "lowest") {
+            this.titleLabel.text = "< LAAGSTE SCORES >";
+            const lows = highscoreManager.getLowestScores();
+            for (let i = 0; i < 5; i++) {
+                const score = lows[i] !== undefined ? lows[i] : "/";
+                this.scoreLabels[i].text = `${i + 1}. ${score}`;
+            }
         } else {
             this.titleLabel.text = "< SNELSTE TIJDEN >";
-            const times = getFastestTimes();
+            const times = highscoreManager.getFastestTimes();
             for (let i = 0; i < 5; i++) {
                 if (typeof times[i] === "number") {
                     // Zet ms om naar seconden met 2 decimalen
@@ -133,10 +148,31 @@ export class ScoresMenu extends Actor {
 
     onPreUpdate(engine) {
         if (engine.inputCooldown > 0) return;
-        // Wissel tussen score/tijd
-        if (engine.input.keyboard.wasPressed(Keys.A) || engine.input.keyboard.wasPressed(Keys.Left) ||
-            engine.input.keyboard.wasPressed(Keys.D) || engine.input.keyboard.wasPressed(Keys.Right)) {
-            this.selectedType = this.selectedType === "score" ? "time" : "score";
+        // Wissel tussen score/tijd/laagste
+        // Dit menu is gebugged.
+        if (
+            engine.input.keyboard.wasPressed(Keys.A) ||
+            engine.input.keyboard.wasPressed(Keys.Left) ||
+            engine.input.keyboard.wasPressed(Keys.D) ||
+            engine.input.keyboard.wasPressed(Keys.Right)
+        ) {
+            if (settings.allowNegativeScore) {
+                // Rechts: score > lowest > time
+                if (engine.input.keyboard.wasPressed(Keys.D) || engine.input.keyboard.wasPressed(Keys.Right)) {
+                    if (this.selectedType === "score") this.selectedType = "lowest";
+                    else if (this.selectedType === "lowest") this.selectedType = "time";
+                    else this.selectedType = "score";
+                }
+                // Links: score > time > lowest
+                else if (engine.input.keyboard.wasPressed(Keys.A) || engine.input.keyboard.wasPressed(Keys.Left)) {
+                    if (this.selectedType === "score") this.selectedType = "time";
+                    else if (this.selectedType === "time") this.selectedType = "lowest";
+                    else this.selectedType = "score";
+                }
+            } else {
+                // Alleen score en tijd
+                this.selectedType = this.selectedType === "score" ? "time" : "score";
+            }
             settings.scoreboardType = this.selectedType;
             this.updateScores();
         }
@@ -146,7 +182,7 @@ export class ScoresMenu extends Actor {
     }
 }
 
-export class ModeSelectMenu extends Actor {
+export class ModeSelectMenu extends BaseMenu {
     constructor(engine, onSingle, onVersus, onBack) {
         super();
         this.engine = engine;
@@ -181,12 +217,6 @@ export class ModeSelectMenu extends Actor {
         this.addChild(terugLabel);
         this.labels = [singleLabel, versusLabel, terugLabel];
         this.updateSelection();
-    }
-
-    updateSelection() {
-        this.labels.forEach((label, i) => {
-            label.color = (i === this.selected) ? Color.Yellow : Color.White;
-        });
     }
 
     onPreUpdate(engine) {

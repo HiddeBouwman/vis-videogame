@@ -84,6 +84,8 @@ export class Logo extends Actor {
     }
 }
 
+
+
 export class animatedStar1 extends Actor {
     constructor(pos = new Vector(0, 0)) {
         super();

@@ -1,7 +1,6 @@
 import { Resources } from "./resources.js";
 import { Vector, Actor, Color, CollisionType, Keys } from "excalibur";
-import { Bobber as Bobber1 } from './bobber-top.js';
-import { Bobber as Bobber2 } from './bobber-top-p2.js';
+import { Bobber } from './bobber-top.js';
 import { cursorAndShadowFishGroup } from "./collisiongroups.js"
 
 export class Cursor extends Actor {
@@ -28,12 +27,12 @@ export class Cursor extends Actor {
     onInitialize(engine) {
         this.engine = engine;
         if (engine.gamemode === "single" && !this.isPlayer2) {
-            this.pos = new Vector(320, 448);
+            this.pos = new Vector(320, 448); // als je singleplayer speelt spawnt de speler in het midden van het water
         } else if (!this.isPlayer2) {
             this.pos = new Vector(280, 448);
         } else {
             this.pos = new Vector(360, 448);
-        }
+        } // als je versus speelt spawnen de spelers allebei even ver van het midden af.
     }
 
     onPostUpdate(engine) {
@@ -44,7 +43,7 @@ export class Cursor extends Actor {
             // Speler 2: pijltjestoetsen
             if (engine.input.keyboard.isHeld(Keys.Left) && !this.bobberOut) xspeed -= 375;
             if (engine.input.keyboard.isHeld(Keys.Right) && !this.bobberOut) xspeed += 375;
-            if (engine.input.keyboard.isHeld(Keys.Up) && !this.bobberOut) yspeed -= 175;
+            if (engine.input.keyboard.isHeld(Keys.Up) && !this.bobberOut) yspeed -= 175; // omhoog en omlaag gaat langzamer om een soort "diepte (in de z-as)" na te bootsen.
             if (engine.input.keyboard.isHeld(Keys.Down) && !this.bobberOut) yspeed += 175;
         } else {
             // Speler 1: WASD
@@ -62,12 +61,12 @@ export class Cursor extends Actor {
             if (engine.input.keyboard.wasPressed(Keys.ShiftRight)) {
                 if (!this.bobberOut) {
                     if (!engine.bobber2) {
-                        const bobber = new Bobber2(this.pos.clone().add(new Vector(0, -6)));
+                        const bobber = new Bobber(this.pos.clone().add(new Vector(0, -6)), true); // true = speler 2
                         engine.add(bobber);
                         engine.bobber2 = bobber;
                     }
                     this.bobberOut = true;
-                    this.scale = new Vector(0, 0);
+                    this.scale = new Vector(0, 0); // we maken de cursor oneindig keer zo klein, onzichtbaar maken was gebugged om wat voor reden dan ook.
                 } else {
                     if (engine.bobber2 && typeof engine.bobber2.reelIn === "function") {
                         engine.bobber2.reelIn();
@@ -77,7 +76,7 @@ export class Cursor extends Actor {
                 }
             }
         } else {
-            // Speler 1: Q/E/Z/X/C/V
+            // Speler 1: Q/E/Z/X/C/V  -- de hoeveelheid was voor debugging en/of speedrunning
             if (
                 engine.input.keyboard.wasPressed(Keys.Q) ||
                 engine.input.keyboard.wasPressed(Keys.E) ||
@@ -88,7 +87,7 @@ export class Cursor extends Actor {
             ) {
                 if (!this.bobberOut) {
                     if (!engine.bobber) {
-                        const bobber = new Bobber1(this.pos.clone().add(new Vector(0, -6)));
+                        const bobber = new Bobber(this.pos.clone().add(new Vector(0, -6)), false); // false = speler 1
                         engine.add(bobber);
                         engine.bobber = bobber;
                     }

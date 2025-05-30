@@ -3,10 +3,10 @@ import { FishTypes } from "./fish-config.js";
 import { Resources } from "./resources.js";
 import { cursorAndShadowFishGroup } from "./collisiongroups.js";
 import { SurfacedFish } from "./surfacedfish.js";
+import { settings } from "./settings.js";
 
 export class ShadowFish extends Actor {
     constructor() {
-        // Kies een fishType zoals eerder
         const weightedFish = [
             "smallFishBlue", "smallFishBlue", "smallFishBlue",
             "smallFishCyan", "smallFishCyan", "smallFishCyan",
@@ -16,6 +16,9 @@ export class ShadowFish extends Actor {
             "redFish", "redFish",
             "turtle"
         ];
+        if (settings.allowTire) {
+            weightedFish.push("tire");
+        }
         const randomKey = weightedFish[Math.floor(Math.random() * weightedFish.length)];
         const fishType = FishTypes[randomKey];
 
@@ -38,18 +41,26 @@ export class ShadowFish extends Actor {
         if (fishType.sprite === "turtle") {
             this.shadowSprite = Resources.turtleShadow.toSprite();
             this._isTurtle = true;
+        } else if (fishType.sprite === "tire") {
+            this.shadowSprite = Resources.tireShadow.toSprite();
+            this._isTurtle = false;
+            this._isTire = true;
         } else if (fishType.hitbox >= 12) {
             this.shadowSprite = Resources.bigFishShadow.toSprite();
             this._isTurtle = false;
+            this._isTire = false;
         } else {
             this.shadowSprite = Resources.smallFishShadow.toSprite();
             this._isTurtle = false;
+            this._isTire = false;
         }
         this.graphics.use(this.shadowSprite);
+
 
         // Willekeurige doelfade opacity tussen 0.4 en 0.6
         this._targetOpacity = 0.4 + Math.random() * 0.2;
         this.graphics.opacity = 0;
+
 
         // Fade-in/fade-out
         this._fadeInDelay = 1500 + Math.random() * 500;
@@ -60,10 +71,14 @@ export class ShadowFish extends Actor {
         this._fadeOutTimer = 0;
         this._fadeOutDuration = 300;
 
+
         // Beweging-variabelen (zoals SurfacedFish)
         this._angle = Math.random() * Math.PI * 2;
         if (fishType.sprite === "turtle") {
             this._speed = 2 + Math.random() * 6;
+            this._targetSpeed = this._speed;
+        } else if (fishType.sprite === "tire") {
+            this._speed = 0.5 + Math.random() * 1.5; // nog langzamer dan schildpad
             this._targetSpeed = this._speed;
         } else if (fishType.hitbox >= 12) {
             this._speed = 8 + Math.random() * 16;
@@ -78,16 +93,17 @@ export class ShadowFish extends Actor {
 
         this._usingFishSprite = false;
 
+
         // Voor transitie naar surfacedFish
         this._moveTimer = 0;
         this._moveDuration = 3000 + Math.random() * 2000; // 3-5 seconden zichtbaar
         this._futureFishType = fishType;
-        this._bounceCount = 0;
-        this._maxBounces = 5;
     }
 
+
+
     onPreUpdate(engine, delta) {
-        // Fade-out logica bij te veel bounces
+        // Fade-out logica bij te veel bounces (bounces feature heb ik weggehaald omdat het niet pastte bij de rest van de gameplay)
         if (this._fadingOut) {
             this._fadeOutTimer += delta;
             let alpha = Math.max(0, this.graphics.opacity - (delta / this._fadeOutDuration) * this._targetOpacity);
@@ -98,16 +114,17 @@ export class ShadowFish extends Actor {
             return;
         }
 
-        // Bepaal of we in de "supersnelle" onzichtbare fase zitten
+
+        // Bepaal of we in de "vlugge" onzichtbare fase zitten
         const isInvisible = this._fadeInDelayTimer < this._fadeInDelay;
+
 
         // Fade-in delay
         if (isInvisible) {
             this._fadeInDelayTimer += delta;
             this.graphics.opacity = 0;
-            // Supersnel gedrag: snelheid en draaisnelheid * 3, maxBounces omhoog
+            // Supersnel gedrag: snelheid en draaisnelheid * 3
             this._speedMultiplier = 3;
-            this._maxBounces = 15;
         } else {
             // Normale fade-in en daarna
             if (this._fadeInTimer < this._fadeInDuration) {
@@ -118,20 +135,22 @@ export class ShadowFish extends Actor {
                 this.graphics.opacity = this._targetOpacity;
                 this._moveTimer += delta;
             }
-            // Normale snelheid en maxBounces
+            // Normale snelheid
             this._speedMultiplier = 1;
-            this._maxBounces = 5;
         }
+
 
         // --- Bewegingsgedrag van SurfacedFish hieronder ---
         this._changeDirTimer += delta;
 
-        // --- NIEUW: voorkom dat vissen te lang onder of boven zitten ---
+
         // Als te lang onderin (> 470), forceer korte beweging omhoog
         if (this.pos.y > 470 && this.vel.y > 0) {
-            this._targetAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 9); // iets omhoog, beetje spreiding
+            this._targetAngle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 9); // iets omhoog, beetje spreiding, wiskunde zoals gewoonlijk niet zelf gedaan
             if (this.fishType.sprite === "turtle") {
                 this._targetSpeed = 2 + Math.random() * 6;
+            } else if (this.fishType.sprite === "tire") {
+                this._targetSpeed = 0.5 + Math.random() * 1.5;
             } else if (this.fishType.hitbox >= 12) {
                 this._targetSpeed = 8 + Math.random() * 8;
             } else {
@@ -145,6 +164,8 @@ export class ShadowFish extends Actor {
             this._targetAngle = Math.PI / 2 + (Math.random() - 0.5) * (Math.PI / 9); // iets omlaag, beetje spreiding
             if (this.fishType.sprite === "turtle") {
                 this._targetSpeed = 2 + Math.random() * 6;
+            } else if (this.fishType.sprite === "tire") {
+                this._targetSpeed = 0.5 + Math.random() * 1.5;
             } else if (this.fishType.hitbox >= 12) {
                 this._targetSpeed = 8 + Math.random() * 8;
             } else {
@@ -158,7 +179,7 @@ export class ShadowFish extends Actor {
             let goToBobber = false;
             let bobberPos = null;
 
-            // Zoek een actieve dobber
+            // Zoek een actieve dobber in het spel
             let bobber = null;
             if (engine.bobber && !engine.bobber.isKilled()) bobber = engine.bobber;
             if (engine.bobber2 && !engine.bobber2.isKilled()) {
@@ -171,7 +192,11 @@ export class ShadowFish extends Actor {
                 }
             }
 
-            if (bobber) {
+
+            // De band is nooit geïnteresseerd in de dobber, het is een fietsband
+            if (this.fishType.sprite === "tire") {
+                goToBobber = false;
+            } else if (bobber) {
                 bobberPos = bobber.pos;
                 // Kans bepalen per soort
                 if (this.fishType.sprite === "turtle") {
@@ -201,6 +226,8 @@ export class ShadowFish extends Actor {
                 this._targetAngle = Math.random() * Math.PI * 2;
                 if (this.fishType.sprite === "turtle") {
                     this._targetSpeed = 2 + Math.random() * 6;
+                } else if (this.fishType.sprite === "tire") {
+                    this._targetSpeed = 0.5 + Math.random() * 1.5;
                 } else if (this.fishType.hitbox >= 12) {
                     this._targetSpeed = 8 + Math.random() * 8;
                 } else {
@@ -212,18 +239,19 @@ export class ShadowFish extends Actor {
             this._changeDirInterval = 2000 + Math.random() * 3000;
         }
 
-        // Interpoleer richting en snelheid langzaam, met multiplier als onzichtbaar
+        // Interpoleer richting en snelheid langzaam, met multiplier als onzichtbaar, gedaan door github Copilot
         let angleDiff = ((this._targetAngle - this._angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
         let angleLerp = Math.min(1, delta / 500) * (this._speedMultiplier || 1);
         let speedLerp = Math.min(1, delta / 50) * (this._speedMultiplier || 1);
         this._angle += angleDiff * angleLerp;
         this._speed += (this._targetSpeed - this._speed) * speedLerp;
 
-        // Zet velocity
+        // Zet velocity, gedaan door github Copilot
         this.vel = new Vector(Math.cos(this._angle), Math.sin(this._angle)).scale(this._speed * (this._speedMultiplier || 1));
 
+
         // --- SPIEGELING LOGICA ---
-        if (!this._isTurtle) {
+        if (!this._isTurtle && !this._isTire) {
             if (this.vel.x < -0.1) {
                 this.scale = new Vector(-1, 1);
             } else if (this.vel.x > 0.1) {
@@ -237,6 +265,7 @@ export class ShadowFish extends Actor {
             }
         }
 
+        
         // --- Transitie naar surfacedFish na moveDuration ---
         if (
             this._fadeInDelayTimer >= this._fadeInDelay &&

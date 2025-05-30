@@ -28,6 +28,10 @@ class Turtle extends FishType {
     constructor() { super("turtle", 8, 18); }
 }
 
+class Tire extends FishType {
+    constructor() { super("tire", -5, 15)}
+}
+
 export const FishTypes = {
     lavenderFish: new LavenderFish(),
     redFish: new RedFish(),
@@ -35,5 +39,6 @@ export const FishTypes = {
     smallFishCyan: new SmallFishCyan(),
     smallFishGreen: new SmallFishGreen(),
     smallFishPink: new SmallFishPink(),
-    turtle: new Turtle()
+    turtle: new Turtle(),
+    tire: new Tire()
 };
